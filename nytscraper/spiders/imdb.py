@@ -2,22 +2,14 @@
 import scrapy
 import unidecode
 import re
-import string
 
-#cleanString = lambda x: '' if x is None else unidecode.unidecode(re.sub(r'\s+',' ',x))
 def cleanString(x):
     if x is None:
         return ''
     else:
         return unidecode.unidecode(re.sub(r'\s+',' ',x))
 
-
-
 class ImdbSpider(scrapy.Spider):
-
-    def __init__(self, name=None, **kwargs):
-        super().__init__()
-        self.links_movies = []
 
     name = 'imdb'
     allowed_domains = ['www.imdb.com']
@@ -48,17 +40,20 @@ class ImdbSpider(scrapy.Spider):
             }
             request = response.follow('https://www.imdb.com/name/'+actor_id+'/bio', callback=self.parse_actor_bio)
             request.meta['item'] = json
-            yield request
             request2 = response.follow('https://www.imdb.com/name/' + actor_id, callback=self.parse_actor_movies)
+            yield request
+            yield request2
 
     def parse_actor_movies(self, response):
         rows = response.css('div#filmo-head-actor+div.filmo-category-section>div')
         for r in rows:
-            moviedate = int(r.css('span.year_column::text'))
+            year_string = r.css('span.year_column::text').extract_first().strip()
+            if not year_string: continue
+            moviedate = int(year_string[:4])
             if moviedate > 1989 or moviedate < 1980: continue
-            movie_id = r.css('::attr(id)').extract_first()
-            movie_link = re.search('actor-(.+?)',movie_id).group(1)
-            self.start_urls.append('https://www.imdb.com/title/'+movie_link+'/fullcredits/')
+            movie_id = re.search('(?:actor|actress)-(.+)', r.css('::attr(id)').extract_first()).group(1)
+            movie_url = 'https://www.imdb.com/title/' + movie_id + '/fullcredits/'
+            yield response.follow(movie_url, callback=self.parse)
 
     def parse_actor_bio(self, response):
         item = response.meta['item']
@@ -75,13 +70,3 @@ class ImdbSpider(scrapy.Spider):
             'height': height
         })
         return item
-
-
-
-
-
-#characters = [i.strip() for i in noisy_character]
-
-# or
-
-#character = list(map(lambda s: s.strip(), noisy_character))
