@@ -1,3 +1,7 @@
+#Exclude the json files
+*.json
+
+
 
 # Created by https://www.gitignore.io/api/python,intellij
 
