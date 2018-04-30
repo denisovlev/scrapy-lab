@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import datetime
+
 import scrapy
 import unidecode
 import re
@@ -72,7 +74,11 @@ class ImdbSpider(scrapy.Spider):
         height = ''
         for r in tr:
             label = r.css('td.label::text').extract_first()
-            if label == 'Born': birthdate = cleanString(r.css('time::attr(datetime)').extract_first()); continue
+            if label == 'Born':
+                string_birthdate = cleanString(r.css('time::attr(datetime)').extract_first())
+                # parse date string
+                birthdate = datetime.datetime.strptime(string_birthdate, '%Y-%m-%d').strftime('%Y-%m-%d')
+                continue
             if label == 'Birth Name': birthname = cleanString(r.css('td:nth_child(2)::text').extract_first()); continue
             if label == 'Height': height = self.get_height(r); continue
         item.update({
